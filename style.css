@@ -73,7 +73,17 @@ select {
   padding: 10px 12px;
   width: 100%;
   transition: border-color 0.2s;
+}
+
+input[type="text"],
+select {
   appearance: none;
+}
+
+/* Keep the native calendar picker icon visible */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
 }
 
 input[type="text"]:focus,

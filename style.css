@@ -80,10 +80,20 @@ select {
   appearance: none;
 }
 
-/* Keep the native calendar picker icon visible */
+/* Keep the native calendar picker icon visible and white */
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.6);
+  filter: invert(1);
   cursor: pointer;
+  opacity: 0.8;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #e2e8f0;
 }
 
 input[type="text"]:focus,

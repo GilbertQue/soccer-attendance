@@ -117,6 +117,74 @@ select:focus {
   color: #64748b;
 }
 
+/* ── Multi-select player list ── */
+.player-check-list {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.player-check-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: #e2e8f0;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 7px 14px;
+  transition: background 0.15s;
+}
+
+.player-check-list label:hover {
+  background: #1e3a5f44;
+}
+
+.player-check-list input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.select-all-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.btn-link:hover { color: #7dd3fc; }
+
+.divider { color: #475569; }
+
+.label-hint {
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 /* ── Buttons ── */
 .btn {
   border: none;

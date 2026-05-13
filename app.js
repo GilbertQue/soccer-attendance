@@ -29,7 +29,9 @@ function saveState() {
 }
 
 // ── DOM References ─────────────────────────────────────────────────────────
-const playerSelect   = document.getElementById('playerSelect');
+const playerCheckList = document.getElementById('playerCheckList');
+const selectAllBtn   = document.getElementById('selectAllBtn');
+const clearSelBtn    = document.getElementById('clearSelBtn');
 const dateInput      = document.getElementById('dateInput');
 const sessionInput   = document.getElementById('sessionInput');
 const markPresentBtn = document.getElementById('markPresentBtn');
@@ -63,19 +65,28 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-// ── Render: player dropdowns & tags ───────────────────────────────────────
+// ── Helpers: get checked players ─────────────────────────────────────────
+function getSelectedPlayers() {
+  return [...playerCheckList.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(cb => cb.value);
+}
+
+// ── Render: player checkboxes, filter dropdown & tags ─────────────────────
 function renderPlayers() {
   const sorted = [...state.players].sort();
 
-  // Main select
-  const prev = playerSelect.value;
-  playerSelect.innerHTML = '<option value="">-- Select a player --</option>';
+  // Checkbox list — preserve checked state
+  const prevChecked = getSelectedPlayers();
+  playerCheckList.innerHTML = '';
   sorted.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p;
-    opt.textContent = p;
-    if (p === prev) opt.selected = true;
-    playerSelect.appendChild(opt);
+    const lbl = document.createElement('label');
+    const cb  = document.createElement('input');
+    cb.type  = 'checkbox';
+    cb.value = p;
+    if (prevChecked.includes(p)) cb.checked = true;
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(p));
+    playerCheckList.appendChild(lbl);
   });
 
   // Filter select
@@ -167,26 +178,32 @@ function escapeHtml(str) {
 
 // ── Actions ────────────────────────────────────────────────────────────────
 function markAttendance(status) {
-  const player  = playerSelect.value.trim();
+  const players = getSelectedPlayers();
   const date    = dateInput.value;
   const session = sessionInput.value.trim();
 
-  if (!player) { showToast('⚠ Please select a player.'); return; }
-  if (!date)   { showToast('⚠ Please select a date.');   return; }
+  if (!players.length) { showToast('⚠ Please select at least one player.'); return; }
+  if (!date)           { showToast('⚠ Please select a date.');              return; }
 
-  // Prevent duplicate for same player + date + session
-  const duplicate = state.records.some(
-    r => r.player === player && r.date === date && (r.session || '') === session
-  );
-  if (duplicate) {
-    showToast('⚠ A record already exists for this player, date, and session.');
+  let added = 0, skipped = 0;
+  players.forEach(player => {
+    const duplicate = state.records.some(
+      r => r.player === player && r.date === date && (r.session || '') === session
+    );
+    if (duplicate) { skipped++; return; }
+    state.records.push({ id: generateId(), player, date, session, status });
+    added++;
+  });
+
+  if (added === 0) {
+    showToast('⚠ All selected players already have a record for this date/session.');
     return;
   }
 
-  state.records.push({ id: generateId(), player, date, session, status });
   saveState();
   render();
-  showToast(`✔ Marked ${player} as ${status} on ${formatDate(date)}.`);
+  const skipNote = skipped ? ` (${skipped} duplicate${skipped > 1 ? 's' : ''} skipped)` : '';
+  showToast(`✔ Marked ${added} player${added > 1 ? 's' : ''} as ${status} on ${formatDate(date)}.${skipNote}`);
 }
 
 function addPlayer() {
@@ -252,6 +269,12 @@ addPlayerBtn.addEventListener('click',   addPlayer);
 exportBtn.addEventListener('click',      exportCSV);
 clearBtn.addEventListener('click',       clearAll);
 filterPlayer.addEventListener('change',  renderRecords);
+selectAllBtn.addEventListener('click',   () => {
+  playerCheckList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+});
+clearSelBtn.addEventListener('click',    () => {
+  playerCheckList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+});
 
 newPlayerInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') addPlayer();

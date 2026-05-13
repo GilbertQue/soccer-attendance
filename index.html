@@ -16,11 +16,12 @@
       <h2>Record Attendance</h2>
 
       <div class="form-group">
-        <label for="playerSelect">Player</label>
-        <div class="select-wrapper">
-          <select id="playerSelect">
-            <option value="">-- Select a player --</option>
-          </select>
+        <label>Players <span class="label-hint">(hold Ctrl / Cmd to select multiple)</span></label>
+        <div class="player-check-list" id="playerCheckList"></div>
+        <div class="select-all-row">
+          <button type="button" id="selectAllBtn" class="btn-link">Select All</button>
+          <span class="divider">·</span>
+          <button type="button" id="clearSelBtn" class="btn-link">Clear</button>
         </div>
       </div>
 

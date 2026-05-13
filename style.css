@@ -384,6 +384,89 @@ td {
   transition: width 0.4s ease;
 }
 
+/* ── Setup Modal ── */
+.setup-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f172acc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.setup-overlay.hidden { display: none; }
+
+.setup-modal {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  max-width: 480px;
+  width: 100%;
+  padding: 32px;
+}
+
+.setup-modal h2 {
+  font-size: 1.2rem;
+  color: #38bdf8;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 8px;
+}
+
+.setup-desc {
+  color: #94a3b8;
+  font-size: 0.88rem;
+  margin-bottom: 24px;
+}
+
+.setup-section h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 6px;
+}
+
+.setup-section p {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.setup-divider {
+  text-align: center;
+  color: #475569;
+  font-size: 0.85rem;
+  margin: 20px 0;
+}
+
+.setup-status {
+  margin-top: 16px;
+  font-size: 0.88rem;
+  color: #38bdf8;
+  min-height: 20px;
+}
+
+/* ── Club Code Bar ── */
+.club-code-bar {
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  padding: 8px 20px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.club-code-bar strong { color: #38bdf8; letter-spacing: 0.05em; }
+.club-code-bar.hidden { display: none; }
+
 /* ── Toast ── */
 .toast {
   position: fixed;

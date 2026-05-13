@@ -1,62 +1,163 @@
-// ── State ──────────────────────────────────────────────────────────────────
+// ── JSONBin config ─────────────────────────────────────────────────────────
+const MASTER_KEY = '$2a$10$.MFByt1FGqQikgzUuG48/uSlAaJYIbIMC3yqreh0/fQGzwUvWu3T.';
+const BIN_BASE   = 'https://api.jsonbin.io/v3/b';
+
 const DEFAULT_PLAYERS = [
   'Alex Johnson', 'Maria Garcia', 'James Lee', 'Sofia Patel',
   'Liam Brown', 'Emma Wilson', 'Noah Martinez', 'Olivia Davis',
   'Ethan Taylor', 'Ava Thomas'
 ];
 
-let state = {
-  players: [],
-  records: []
-};
+// ── State ──────────────────────────────────────────────────────────────────
+let binId = localStorage.getItem('soccerBinId') || '';
+let state = { players: [], records: [] };
+let saveTimer = null;
 
-// ── Persistence ────────────────────────────────────────────────────────────
-function loadState() {
-  try {
-    const saved = localStorage.getItem('soccerAttendance');
-    if (saved) {
-      state = JSON.parse(saved);
-    } else {
-      state.players = [...DEFAULT_PLAYERS];
+// ── JSONBin API ────────────────────────────────────────────────────────────
+async function apiFetch(url, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: {
+      'X-Master-Key': MASTER_KEY,
+      'Content-Type': 'application/json',
+      'X-Bin-Meta': 'false'
     }
-  } catch {
-    state.players = [...DEFAULT_PLAYERS];
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function loadFromCloud() {
+  setStatus('Loading data...');
+  try {
+    const data = await apiFetch(`${BIN_BASE}/${binId}`);
+    state = data.record ?? data;
+    if (!state.players) state.players = [...DEFAULT_PLAYERS];
+    if (!state.records) state.records = [];
+    setStatus('');
+    render();
+  } catch (e) {
+    setStatus('Could not load data. Check your Club Code.');
+    console.error(e);
   }
 }
 
-function saveState() {
-  localStorage.setItem('soccerAttendance', JSON.stringify(state));
+async function saveToCloud() {
+  try {
+    await apiFetch(`${BIN_BASE}/${binId}`, 'PUT', state);
+  } catch (e) {
+    showToast('Save failed - check your connection.');
+    console.error(e);
+  }
 }
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToCloud, 800);
+}
+
+async function createNewBin() {
+  setStatus('Creating database...');
+  try {
+    const result = await apiFetch(BIN_BASE, 'POST', {
+      players: [...DEFAULT_PLAYERS],
+      records: []
+    });
+    return result.metadata.id;
+  } catch (e) {
+    setStatus('Failed to create database: ' + e.message);
+    throw e;
+  }
+}
+
+// ── Setup Modal ────────────────────────────────────────────────────────────
+const setupOverlay    = document.getElementById('setupOverlay');
+const createBinBtn    = document.getElementById('createBinBtn');
+const connectBinBtn   = document.getElementById('connectBinBtn');
+const binIdInput      = document.getElementById('binIdInput');
+const setupStatusEl   = document.getElementById('setupStatus');
+const clubCodeBar     = document.getElementById('clubCodeBar');
+const clubCodeDisplay = document.getElementById('clubCodeDisplay');
+const copyCodeBtn     = document.getElementById('copyCodeBtn');
+const changeDbBtn     = document.getElementById('changeDbBtn');
+
+function setStatus(msg) { setupStatusEl.textContent = msg; }
+
+function showApp() {
+  setupOverlay.classList.add('hidden');
+  clubCodeBar.classList.remove('hidden');
+  clubCodeDisplay.textContent = binId;
+}
+
+function showSetup() {
+  setupOverlay.classList.remove('hidden');
+  clubCodeBar.classList.add('hidden');
+}
+
+createBinBtn.addEventListener('click', async () => {
+  createBinBtn.disabled = true;
+  try {
+    binId = await createNewBin();
+    localStorage.setItem('soccerBinId', binId);
+    state = { players: [...DEFAULT_PLAYERS], records: [] };
+    setStatus('Database created! Your Club Code is: ' + binId);
+    setTimeout(() => { showApp(); render(); }, 1500);
+  } catch {
+    createBinBtn.disabled = false;
+  }
+});
+
+connectBinBtn.addEventListener('click', async () => {
+  const id = binIdInput.value.trim();
+  if (!id) { setStatus('Please paste your Club Code.'); return; }
+  binId = id;
+  localStorage.setItem('soccerBinId', binId);
+  showApp();
+  await loadFromCloud();
+});
+
+copyCodeBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(binId).then(() => showToast('Club Code copied!'));
+});
+
+changeDbBtn.addEventListener('click', () => {
+  if (!confirm('Switch to a different database?\n\nYour current Club Code is:\n' + binId)) return;
+  localStorage.removeItem('soccerBinId');
+  binId = '';
+  showSetup();
+});
 
 // ── DOM References ─────────────────────────────────────────────────────────
 const playerCheckList = document.getElementById('playerCheckList');
-const selectAllBtn   = document.getElementById('selectAllBtn');
-const clearSelBtn    = document.getElementById('clearSelBtn');
-const dateInput      = document.getElementById('dateInput');
-const sessionInput   = document.getElementById('sessionInput');
-const markPresentBtn = document.getElementById('markPresentBtn');
-const markAbsentBtn  = document.getElementById('markAbsentBtn');
-const newPlayerInput = document.getElementById('newPlayerInput');
-const addPlayerBtn   = document.getElementById('addPlayerBtn');
-const playerTagList  = document.getElementById('playerTagList');
-const filterPlayer   = document.getElementById('filterPlayer');
-const recordsBody    = document.getElementById('recordsBody');
-const emptyMsg       = document.getElementById('emptyMsg');
-const exportBtn      = document.getElementById('exportBtn');
-const clearBtn       = document.getElementById('clearBtn');
-const summaryGrid    = document.getElementById('summaryGrid');
-const toast          = document.getElementById('toast');
+const selectAllBtn    = document.getElementById('selectAllBtn');
+const clearSelBtn     = document.getElementById('clearSelBtn');
+const dateInput       = document.getElementById('dateInput');
+const sessionInput    = document.getElementById('sessionInput');
+const markPresentBtn  = document.getElementById('markPresentBtn');
+const markAbsentBtn   = document.getElementById('markAbsentBtn');
+const newPlayerInput  = document.getElementById('newPlayerInput');
+const addPlayerBtn    = document.getElementById('addPlayerBtn');
+const playerTagList   = document.getElementById('playerTagList');
+const filterPlayer    = document.getElementById('filterPlayer');
+const recordsBody     = document.getElementById('recordsBody');
+const emptyMsg        = document.getElementById('emptyMsg');
+const exportBtn       = document.getElementById('exportBtn');
+const clearBtn        = document.getElementById('clearBtn');
+const summaryGrid     = document.getElementById('summaryGrid');
+const toast           = document.getElementById('toast');
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function showToast(msg, duration = 2500) {
+function showToast(msg, duration = 2800) {
   toast.textContent = msg;
   toast.classList.remove('hidden');
-  clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => toast.classList.add('hidden'), duration);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.add('hidden'), duration);
 }
 
 function formatDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
 }
@@ -65,18 +166,22 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-// ── Helpers: get checked players ─────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function getSelectedPlayers() {
   return [...playerCheckList.querySelectorAll('input[type="checkbox"]:checked')]
     .map(cb => cb.value);
 }
 
-// ── Render: player checkboxes, filter dropdown & tags ─────────────────────
+// ── Render ─────────────────────────────────────────────────────────────────
 function renderPlayers() {
   const sorted = [...state.players].sort();
-
-  // Checkbox list — preserve checked state
   const prevChecked = getSelectedPlayers();
+
   playerCheckList.innerHTML = '';
   sorted.forEach(p => {
     const lbl = document.createElement('label');
@@ -89,36 +194,28 @@ function renderPlayers() {
     playerCheckList.appendChild(lbl);
   });
 
-  // Filter select
   const prevFilter = filterPlayer.value;
   filterPlayer.innerHTML = '<option value="">All Players</option>';
   sorted.forEach(p => {
     const opt = document.createElement('option');
-    opt.value = p;
-    opt.textContent = p;
+    opt.value = p; opt.textContent = p;
     if (p === prevFilter) opt.selected = true;
     filterPlayer.appendChild(opt);
   });
 
-  // Tags
   playerTagList.innerHTML = '';
   sorted.forEach(p => {
     const tag = document.createElement('span');
     tag.className = 'tag';
-    tag.innerHTML = `${escapeHtml(p)} <button class="remove-tag" aria-label="Remove ${escapeHtml(p)}" data-player="${escapeHtml(p)}">×</button>`;
+    tag.innerHTML = `${escapeHtml(p)} <button class="remove-tag" data-player="${escapeHtml(p)}">x</button>`;
     playerTagList.appendChild(tag);
   });
 }
 
-// ── Render: records table ──────────────────────────────────────────────────
 function renderRecords() {
-  const filter = filterPlayer.value;
-  const visible = filter
-    ? state.records.filter(r => r.player === filter)
-    : state.records;
-
-  // Sort newest first
-  const sorted = [...visible].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const filter  = filterPlayer.value;
+  const visible = filter ? state.records.filter(r => r.player === filter) : state.records;
+  const sorted  = [...visible].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   emptyMsg.style.display = sorted.length ? 'none' : 'block';
   document.getElementById('recordsTable').style.display = sorted.length ? 'table' : 'none';
@@ -129,25 +226,21 @@ function renderRecords() {
     tr.innerHTML = `
       <td>${formatDate(rec.date)}</td>
       <td>${escapeHtml(rec.player)}</td>
-      <td>${escapeHtml(rec.session || '—')}</td>
+      <td>${escapeHtml(rec.session || '-')}</td>
       <td><span class="badge badge-${rec.status}">${rec.status}</span></td>
-      <td><button class="btn-delete" data-id="${rec.id}" title="Delete record">✕</button></td>
+      <td><button class="btn-delete" data-id="${rec.id}" title="Delete">x</button></td>
     `;
     recordsBody.appendChild(tr);
   });
 }
 
-// ── Render: summary ────────────────────────────────────────────────────────
 function renderSummary() {
   summaryGrid.innerHTML = '';
-  const sorted = [...state.players].sort();
-
-  sorted.forEach(p => {
-    const playerRecs = state.records.filter(r => r.player === p);
-    const total   = playerRecs.length;
-    const present = playerRecs.filter(r => r.status === 'present').length;
+  [...state.players].sort().forEach(p => {
+    const recs    = state.records.filter(r => r.player === p);
+    const total   = recs.length;
+    const present = recs.filter(r => r.status === 'present').length;
     const pct     = total ? Math.round((present / total) * 100) : 0;
-
     const div = document.createElement('div');
     div.className = 'summary-item';
     div.innerHTML = `
@@ -159,107 +252,82 @@ function renderSummary() {
   });
 }
 
-// ── Render all ─────────────────────────────────────────────────────────────
-function render() {
-  renderPlayers();
-  renderRecords();
-  renderSummary();
-}
-
-// ── XSS guard ──────────────────────────────────────────────────────────────
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+function render() { renderPlayers(); renderRecords(); renderSummary(); }
 
 // ── Actions ────────────────────────────────────────────────────────────────
 function markAttendance(status) {
   const players = getSelectedPlayers();
   const date    = dateInput.value;
   const session = sessionInput.value.trim();
-
-  if (!players.length) { showToast('⚠ Please select at least one player.'); return; }
-  if (!date)           { showToast('⚠ Please select a date.');              return; }
+  if (!players.length) { showToast('Please select at least one player.'); return; }
+  if (!date)           { showToast('Please select a date.'); return; }
 
   let added = 0, skipped = 0;
   players.forEach(player => {
-    const duplicate = state.records.some(
-      r => r.player === player && r.date === date && (r.session || '') === session
-    );
-    if (duplicate) { skipped++; return; }
+    if (state.records.some(r => r.player === player && r.date === date && (r.session || '') === session)) {
+      skipped++; return;
+    }
     state.records.push({ id: generateId(), player, date, session, status });
     added++;
   });
 
-  if (added === 0) {
-    showToast('⚠ All selected players already have a record for this date/session.');
-    return;
-  }
-
-  saveState();
-  render();
+  if (!added) { showToast('All selected players already have a record for this date/session.'); return; }
   const skipNote = skipped ? ` (${skipped} duplicate${skipped > 1 ? 's' : ''} skipped)` : '';
-  showToast(`✔ Marked ${added} player${added > 1 ? 's' : ''} as ${status} on ${formatDate(date)}.${skipNote}`);
+  showToast(`Marked ${added} player${added > 1 ? 's' : ''} as ${status} on ${formatDate(date)}.${skipNote}`);
+  render();
+  scheduleSave();
 }
 
 function addPlayer() {
   const name = newPlayerInput.value.trim();
-  if (!name) { showToast('⚠ Enter a player name.'); return; }
+  if (!name) { showToast('Enter a player name.'); return; }
   if (state.players.map(p => p.toLowerCase()).includes(name.toLowerCase())) {
-    showToast('⚠ Player already exists.');
-    return;
+    showToast('Player already exists.'); return;
   }
   state.players.push(name);
   newPlayerInput.value = '';
-  saveState();
   render();
-  showToast(`✔ Added player: ${name}`);
+  scheduleSave();
+  showToast('Added player: ' + name);
 }
 
 function removePlayer(name) {
   if (!confirm(`Remove "${name}" and all their records?`)) return;
-  state.players  = state.players.filter(p => p !== name);
-  state.records  = state.records.filter(r => r.player !== name);
-  saveState();
+  state.players = state.players.filter(p => p !== name);
+  state.records = state.records.filter(r => r.player !== name);
   render();
-  showToast(`Removed player: ${name}`);
+  scheduleSave();
+  showToast('Removed player: ' + name);
 }
 
 function deleteRecord(id) {
   state.records = state.records.filter(r => r.id !== id);
-  saveState();
   render();
+  scheduleSave();
   showToast('Record deleted.');
 }
 
 function clearAll() {
   if (!confirm('Delete ALL attendance records? Player list will be kept.')) return;
   state.records = [];
-  saveState();
   render();
+  scheduleSave();
   showToast('All records cleared.');
 }
 
-// ── CSV Export ─────────────────────────────────────────────────────────────
 function exportCSV() {
   if (!state.records.length) { showToast('No records to export.'); return; }
-  const header = 'Date,Player,Session,Status\n';
-  const rows   = state.records
-    .slice()
-    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-    .map(r => `"${r.date}","${r.player.replace(/"/g, '""')}","${(r.session || '').replace(/"/g, '""')}","${r.status}"`)
+  const rows = state.records
+    .slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .map(r => `"${r.date}","${r.player.replace(/"/g,'""')}","${(r.session||'').replace(/"/g,'""')}","${r.status}"`)
     .join('\n');
-  const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `soccer-attendance-${new Date().toISOString().slice(0,10)}.csv`;
+  const blob = new Blob(['Date,Player,Session,Status\n' + rows], { type: 'text/csv;charset=utf-8;' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: 'soccer-attendance-' + new Date().toISOString().slice(0,10) + '.csv'
+  });
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(a.href);
 }
 
 // ── Event Listeners ────────────────────────────────────────────────────────
@@ -269,32 +337,18 @@ addPlayerBtn.addEventListener('click',   addPlayer);
 exportBtn.addEventListener('click',      exportCSV);
 clearBtn.addEventListener('click',       clearAll);
 filterPlayer.addEventListener('change',  renderRecords);
-selectAllBtn.addEventListener('click',   () => {
-  playerCheckList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
-});
-clearSelBtn.addEventListener('click',    () => {
-  playerCheckList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-});
-
-newPlayerInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') addPlayer();
-});
-
-// Delegated: remove player tag
-playerTagList.addEventListener('click', e => {
-  const btn = e.target.closest('.remove-tag');
-  if (btn) removePlayer(btn.dataset.player);
-});
-
-// Delegated: delete record row
-recordsBody.addEventListener('click', e => {
-  const btn = e.target.closest('.btn-delete');
-  if (btn) deleteRecord(btn.dataset.id);
-});
+selectAllBtn.addEventListener('click',   () => playerCheckList.querySelectorAll('input').forEach(cb => cb.checked = true));
+clearSelBtn.addEventListener('click',    () => playerCheckList.querySelectorAll('input').forEach(cb => cb.checked = false));
+newPlayerInput.addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
+playerTagList.addEventListener('click', e => { const b = e.target.closest('.remove-tag'); if (b) removePlayer(b.dataset.player); });
+recordsBody.addEventListener('click',   e => { const b = e.target.closest('.btn-delete');  if (b) deleteRecord(b.dataset.id); });
 
 // ── Init ───────────────────────────────────────────────────────────────────
-// Default date = today
 dateInput.valueAsDate = new Date();
 
-loadState();
-render();
+if (binId) {
+  showApp();
+  loadFromCloud();
+} else {
+  showSetup();
+}

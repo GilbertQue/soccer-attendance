@@ -84,6 +84,40 @@
     </section>
   </div>
 
+  <!-- Setup / Club Code modal -->
+  <div id="setupOverlay" class="setup-overlay hidden">
+    <div class="setup-modal">
+      <h2>⚽ Welcome to Coomera Colts Attendance</h2>
+      <p class="setup-desc">This app stores all data in the cloud so every device stays in sync.</p>
+
+      <div class="setup-section">
+        <h3>New setup</h3>
+        <p>First time using this app? Click below to create a new shared database and get your Club Code.</p>
+        <button id="createBinBtn" class="btn btn-present">Create New Database</button>
+      </div>
+
+      <div class="setup-divider">— or —</div>
+
+      <div class="setup-section">
+        <h3>Existing setup</h3>
+        <p>Already have a Club Code? Enter it to connect to your shared data.</p>
+        <div class="inline-group">
+          <input type="text" id="binIdInput" placeholder="Paste Club Code here" />
+          <button id="connectBinBtn" class="btn btn-add">Connect</button>
+        </div>
+      </div>
+
+      <div id="setupStatus" class="setup-status"></div>
+    </div>
+  </div>
+
+  <!-- Club Code display bar -->
+  <div id="clubCodeBar" class="club-code-bar hidden">
+    Club Code: <strong id="clubCodeDisplay"></strong>
+    <button id="copyCodeBtn" class="btn-link" style="margin-left:10px">Copy</button>
+    <button id="changeDbBtn" class="btn-link" style="margin-left:12px; color:#f87171">Change Database</button>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <script src="app.js"></script>
